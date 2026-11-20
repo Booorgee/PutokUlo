@@ -1,0 +1,685 @@
+===============================================================================
+  PUTOKULO HELMET - WIRING GUIDE
+  Step by step, for beginners
+===============================================================================
+
+  WHAT'S IN THIS GUIDE
+
+    Part 1   What you need
+    Part 2   The basics: breadboard, Pi pins, safety
+    Part 3   The camera module
+    Part 4   Power rails
+    Part 5   The front sensor (wire ONE sensor and test it first)
+    Part 6   The other three sensors
+    Part 7   The buzzer and the S8050 transistor
+    Part 8   Check everything before you power on
+    Part 9   Testing
+    Part 10  Troubleshooting
+    Part 11  Moving it onto the helmet
+    Appendix A  Every wire in one list
+    Appendix B  Other resistor values
+
+  PICTURES THAT GO WITH THIS GUIDE (same folder as this file)
+
+    1-pi-pins.png       which Pi pins are used, colour coded
+    2-breadboard.png    where every part goes on the breadboard
+
+  TIP: open this file with a monospaced font (Notepad, VS Code, or TextEdit
+  in plain-text mode) so the drawings line up.
+
+
+===============================================================================
+  PART 1 - WHAT YOU NEED
+===============================================================================
+
+  [ ] Raspberry Pi 4 that already boots Raspberry Pi OS
+      (stuck in "emergency mode"? see the end of Part 10)
+  [ ] Official 5V 3A USB-C power supply (a phone charger is often too weak)
+  [ ] Raspberry Pi Camera Module and its ribbon cable
+  [ ] 4 x HC-SR04 ultrasonic sensor
+  [ ] 1 x active buzzer (2 wires: red and black)
+  [ ] 1 x S8050 transistor (small black part, 3 legs, one flat side)
+  [ ] 5 x 1k ohm resistor
+  [ ] 4 x 2k ohm resistor
+  [ ] 1 x breadboard (half size with 30 rows is enough)
+  [ ] 19 x female-to-male jumper wire
+  [ ]  4 x female-to-female jumper wire
+  [ ]  1 x male-to-male jumper wire (short)
+
+  JUMPER WIRE ENDS
+
+      male   end:  =====[]----   (a metal pin sticks out)
+      female end:  =====[  ]     (a hole / socket)
+
+    The Pi's pins and the sensors' pins stick out (they are male), so the
+    end of a wire that goes ONTO them must be female. The breadboard has
+    holes, so the end that goes INTO the breadboard must be male.
+
+  READING RESISTORS
+
+    4 stripes (beige body), hold it with the gold stripe on the right:
+        1k ohm  =  brown  black  red   gold
+        2k ohm  =  red    black  red   gold
+
+    5 stripes (blue body), hold it with the brown stripe that's set
+    apart from the others on the right:
+        1k ohm  =  brown  black  black  brown  brown
+        2k ohm  =  red    black  black  brown  brown
+
+    Not sure? Measure it with a multimeter set to ohms (the 20k range).
+    Resistors don't have a direction: either leg can go either way.
+
+
+===============================================================================
+  PART 2 - THE BASICS
+===============================================================================
+
+  2.1  HOW A BREADBOARD WORKS
+
+         rails      left half          right half        rails
+         + -      a  b  c  d  e      f  g  h  i  j       - +
+        +-----+  +---------------+  +---------------+  +-----+
+     1  | . . |  | .  .  .  .  . |  | .  .  .  .  . |  | . . |
+     2  | . . |  | .  .  .  .  . |  | .  .  .  .  . |  | . . |
+     3  | . . |  | .  .  .  .  . |  | .  .  .  .  . |  | . . |
+     4  | . . |  | .  .  .  .  . |  | .  .  .  .  . |  | . . |
+     5  | . . |  | .  .  .  .  . |  | .  .  .  .  . |  | . . |
+    ..  | : : |  |      ...      |  |      ...      |  | : : |
+    30  | . . |  | .  .  .  .  . |  | .  .  .  .  . |  | . . |
+        +-----+  +---------------+  +---------------+  +-----+
+                                  ^
+                           the middle gap
+
+    * The 5 holes of one ROW (a b c d e) are joined inside by a metal
+      strip. Plug two things into row 5 and they are connected.
+
+          row 5:   a  b  c  d  e
+                   o==o==o==o==o     <- all joined
+
+    * Row 5 on the left (a-e) is NOT joined to row 5 on the right (f-j).
+      The middle gap separates them.
+
+    * A RAIL is a long column along the side, marked with a red line (+)
+      and a blue line (-). Every hole along one rail is joined, top to
+      bottom. Some long breadboards have a break in the middle of the rail
+      (the red/blue line has a gap). If yours does, join the two halves
+      with a short wire.
+
+    * We name a hole by its row number and column letter.
+      "5c" means row 5, column c.
+
+    * This guide uses only the LEFT half (a-e) and the LEFT rails.
+      On your board the + and - rails may be in the other order. That's
+      fine: just follow the red (+) and blue (-) lines.
+
+  2.2  FINDING THE PINS ON THE PI
+
+    Put the Pi on the table, chips facing up, USB ports on the RIGHT.
+    The 40-pin header is then along the TOP edge:
+
+    +-------------------------------------------------------------+
+    |  +-------------------------------------------------------+  |
+    |  |  2   4   6   8  10  12  14  16  18  20 ...   38  40   |  |  <- top row
+    |  |  1   3   5   7   9  11  13  15  17  19 ...   37  39   |  |  <- bottom row
+    |  +-------------------------------------------------------+  |
+    |     ^                                                       +-------+
+    |     pin 1 (it has a SQUARE solder pad underneath)           |  USB  |
+    |                                                             +-------+
+ [DISPLAY]                                                        |  USB  |
+    | (don't use)                                                 +-------+
+    |                                                             |  LAN  |
+    |   SD card slot is underneath,           [CAMERA]            +-------+
+    |   on this left end                                          |
+    +--[USB-C power]---[HDMI 0]--[HDMI 1]------------[AUDIO]------+
+
+    * ODD numbers (1, 3, 5 ... 39) are on the BOTTOM row (inside the board).
+    * EVEN numbers (2, 4, 6 ... 40) are on the TOP row (at the board edge).
+    * Pins come in pairs. The 1st pair from the left is pins 1 and 2, the
+      2nd pair is 3 and 4, and so on.
+
+    The pins this project uses, and how to find each one by counting pairs
+    from the LEFT end:
+
+      Pin | Pair from the left | Row    | Goes to
+      ----+--------------------+--------+---------------------------------
+        2 |  1st               | top    | + rail (5V)
+        6 |  3rd               | top    | - rail (GND)
+       11 |  6th               | bottom | BACK sensor Trig
+       12 |  6th               | top    | buzzer (through a 1k resistor)
+       13 |  7th               | bottom | BACK sensor Echo (via resistors)
+       16 |  8th               | top    | FRONT sensor Trig
+       18 |  9th               | top    | FRONT sensor Echo (via resistors)
+       29 | 15th               | bottom | LEFT sensor Trig
+       31 | 16th               | bottom | LEFT sensor Echo (via resistors)
+       38 | 19th               | top    | RIGHT sensor Trig
+       40 | 20th (last)        | top    | RIGHT sensor Echo (via resistors)
+
+    Full map of the header (# = a pin we use, o = a pin we leave empty).
+    Same layout as above, turned sideways: pin 1 is at the top left.
+
+                                   +-------+
+                          3.3V  1  | o   # |  2  5V      ==> + rail (5V)
+                        GPIO 2  3  | o   o |  4  5V
+                        GPIO 3  5  | o   # |  6  GND     ==> - rail (GND)
+                        GPIO 4  7  | o   o |  8  GPIO 14
+                           GND  9  | o   o |  10 GPIO 15
+         BACK Trig <== GPIO 17 11  | #   # |  12 GPIO 18 ==> BUZZER (via 1k)
+         BACK Echo <== GPIO 27 13  | #   o |  14 GND
+                       GPIO 22 15  | o   # |  16 GPIO 23 ==> FRONT Trig
+                          3.3V 17  | o   # |  18 GPIO 24 ==> FRONT Echo
+                       GPIO 10 19  | o   o |  20 GND
+                        GPIO 9 21  | o   o |  22 GPIO 25
+                       GPIO 11 23  | o   o |  24 GPIO 8
+                           GND 25  | o   o |  26 GPIO 7
+                         ID_SD 27  | o   o |  28 ID_SC
+         LEFT Trig <==  GPIO 5 29  | #   o |  30 GND
+         LEFT Echo <==  GPIO 6 31  | #   o |  32 GPIO 12
+                       GPIO 13 33  | o   o |  34 GND
+                       GPIO 19 35  | o   o |  36 GPIO 16
+                       GPIO 26 37  | o   # |  38 GPIO 20 ==> RIGHT Trig
+                           GND 39  | o   # |  40 GPIO 21 ==> RIGHT Echo
+                                   +-------+
+                                (USB ports end)
+
+    On the Pi itself you can also type   pinout   in the terminal. It
+    prints a map of the header.
+
+  2.3  SAFETY RULES (read these!)
+
+    1. TURN THE PI OFF AND UNPLUG IT while you wire.
+       Type   sudo shutdown now   wait until the green light stops
+       blinking, then pull out the power cable.
+
+    2. NEVER connect a sensor's Echo pin straight to the Pi.
+       Echo sends out 5V. The Pi's pins only take 3.3V, and 5V can
+       damage it for good. The two resistors in Part 5 bring it down to
+       3.3V.
+
+    3. NEVER let pin 2 or pin 4 (5V) touch any other pin.
+       Count the pins twice before you push a wire on.
+
+    4. Push every wire in all the way. Half-plugged wires cause most
+       "it doesn't work" problems.
+
+
+===============================================================================
+  PART 3 - THE CAMERA MODULE
+===============================================================================
+
+  1. The Pi is OFF and unplugged.
+
+  2. Find the connector labelled CAMERA: the thin black slot between the
+     HDMI ports and the audio jack. NOT the one labelled DISPLAY.
+
+  3. Open it: with your fingernails, gently lift the plastic clip on top of
+     the connector by about 2 mm, pulling up on both ends evenly. It stays
+     attached. Don't pull it off.
+
+        before:   ___[=====]___        after:   ___[     ]___
+                     clip down                     clip up (open)
+
+  4. Slide the ribbon cable straight down into the slot:
+
+        - the SILVER CONTACTS face the HDMI ports
+        - the BLUE STRIP faces the audio jack
+
+             HDMI ports        ||        audio jack
+                <-- silver side || blue side -->
+                          ______||______
+                         |   CAMERA     |
+
+  5. Push the clip back down while holding the cable in place.
+     Tug the cable very gently: it must not move.
+
+  6. The other end of the cable usually comes already attached to the
+     camera board. Leave it alone. If it came out, open that clip the same
+     way and put the cable in so the silver contacts touch the metal
+     contacts inside the connector.
+
+  7. Later, with the Pi on, check it:   rpicam-hello --list-cameras
+     It should list one camera. "No cameras available" = the cable is
+     backwards, not pushed in all the way, or in the DISPLAY slot.
+
+
+===============================================================================
+  PART 4 - POWER RAILS
+===============================================================================
+
+  Everything gets its power from the Pi through the two rails.
+
+    Wire 1:  Pi pin 2 (5V)   --->  + rail   (use a RED wire if you have one)
+    Wire 2:  Pi pin 6 (GND)  --->  - rail   (use a BLACK wire if you have one)
+
+  Use female-to-male wires: the female end on the Pi pin, the male end in
+  any hole of the rail.
+
+       Raspberry Pi                         breadboard
+      +------------+
+      |  pin 2  #--+------- red ----------->  + rail
+      |  pin 6  #--+------- black --------->  - rail
+      +------------+
+
+
+===============================================================================
+  PART 5 - THE FRONT SENSOR (wire ONE sensor and test it first)
+===============================================================================
+
+  5.1  MEET THE HC-SR04
+
+        _____________________________________
+       |    _______             _______      |
+       |   /       \           /       \     |   <- the two "eyes" face
+       |  |    T    |         |    R    |    |      the thing you want
+       |   \_______/           \_______/     |      to detect
+       |                                     |
+       |_____________________________________|
+             |       |        |       |
+            VCC     Trig     Echo    Gnd       <- printed on the board
+
+    VCC  = power (5V)        Trig = the Pi says "send a ping now"
+    Gnd  = ground (0V)       Echo = the sensor answers "here's the echo"
+
+  5.2  WHY TWO RESISTORS? (the "voltage divider")
+
+    Echo sends out 5V, too much for the Pi. Two resistors in a row split
+    the voltage, and the Pi reads the point in the middle (3.3V):
+
+       sensor Echo ----[ 1k ]----+----> Pi pin
+                                 |
+                              [ 2k ]
+                                 |
+                              - rail (GND)
+
+  5.3  THE WHOLE BREADBOARD WHEN YOU'RE DONE
+
+    Don't panic: we fill this in one part at a time. This is also in
+    2-breadboard.png.
+
+      *  something is plugged into this hole (a resistor leg, a wire end)
+      |  the body of a resistor lying over the holes (not plugged in)
+     ==  a resistor lying sideways (=[2k]==)
+     --  a short wire lying sideways
+    E B C  the legs of the S8050 transistor
+      .  empty hole
+
+          +   -       a   b   c   d   e
+         ----------------------------------
+      1   .   .       .   .   *   .   *   <-- FRONT sensor Echo (from the sensor)
+      2   .   .       .   .   |   .   .
+      3   .   .       .   .   |   .   .       1k resistor from 1c to 5c
+      4   .   .       .   .   |   .   .
+      5   .   *=[2k]==*   .   *   .   *   --> to Pi pin 18   (2k: 5a to - rail)
+      6   .   .       .   .   .   .   .
+      7   .   .       .   .   *   .   *   <-- BACK sensor Echo (from the sensor)
+      8   .   .       .   .   |   .   .
+      9   .   .       .   .   |   .   .       1k resistor from 7c to 11c
+     10   .   .       .   .   |   .   .
+     11   .   *=[2k]==*   .   *   .   *   --> to Pi pin 13   (2k: 11a to - rail)
+     12   .   .       .   .   .   .   .
+     13   .   .       .   .   *   .   *   <-- LEFT sensor Echo (from the sensor)
+     14   .   .       .   .   |   .   .
+     15   .   .       .   .   |   .   .       1k resistor from 13c to 17c
+     16   .   .       .   .   |   .   .
+     17   .   *=[2k]==*   .   *   .   *   --> to Pi pin 31   (2k: 17a to - rail)
+     18   .   .       .   .   .   .   .
+     19   .   .       .   .   *   .   *   <-- RIGHT sensor Echo (from the sensor)
+     20   .   .       .   .   |   .   .
+     21   .   .       .   .   |   .   .       1k resistor from 19c to 23c
+     22   .   .       .   .   |   .   .
+     23   .   *=[2k]==*   .   *   .   *   --> to Pi pin 40   (2k: 23a to - rail)
+     24   .   .       .   .   .   .   .
+     25   .   .       .   .   .   *   *   --> to Pi pin 12 (buzzer)
+     26   .   .       .   .   .   |   .
+     27   .   .       .   .   .   |   .       1k resistor from 25d to 29d
+     28   .   *-------*   .   E   |   .       S8050 E, short wire 28a to - rail
+     29   .   .       .   .   B   *   .       S8050 B
+     30   *   .       *   .   C   .   .       S8050 C, buzzer BLACK in 30a, RED in + rail
+
+  5.4  STEP BY STEP
+
+    Step 1   Sensor VCC   --->  + rail         (female-to-male wire)
+    Step 2   Sensor Gnd   --->  - rail         (female-to-male wire)
+    Step 3   Sensor Trig  --->  Pi pin 16      (female-to-FEMALE wire,
+                                               straight to the Pi, it does
+                                               NOT go on the breadboard)
+    Step 4   Sensor Echo  --->  hole 1e        (female-to-male wire)
+    Step 5   1k resistor: one leg in hole 1c, the other leg in hole 5c.
+             Bend the legs down so it lies flat along column c.
+    Step 6   2k resistor: one leg in hole 5a, the other leg in the - rail
+             (any hole of the - rail next to row 5).
+    Step 7   Wire from hole 5e  --->  Pi pin 18   (female-to-male wire)
+
+    What you built:
+
+       sensor Echo --> 1e ~ 1c --[1k]-- 5c ~ 5a --[2k]-- - rail
+                                         ~
+                                         5e --> Pi pin 18
+
+       ("~" = same row, joined inside the breadboard)
+
+  5.5  TEST IT NOW, before wiring the other three. See Part 9.
+       If the front sensor works, the others are the same pattern.
+
+
+===============================================================================
+  PART 6 - THE OTHER THREE SENSORS
+===============================================================================
+
+  Exactly like the front sensor, only the rows and the pins change.
+
+                    | Trig   | Echo  | 1k resistor   | 2k resistor      | Wire to
+    Sensor          | to pin | into  | (column c)    | (to - rail)      | Pi pin
+    ----------------+--------+-------+---------------+------------------+--------
+    FRONT (done)    |   16   |  1e   |  1c  to  5c   |  5a  to - rail   | 5e  -> 18
+    BACK            |   11   |  7e   |  7c  to 11c   | 11a  to - rail   | 11e -> 13
+    LEFT            |   29   | 13e   | 13c  to 17c   | 17a  to - rail   | 17e -> 31
+    RIGHT           |   38   | 19e   | 19c  to 23c   | 23a  to - rail   | 23e -> 40
+
+  For EVERY sensor:   VCC ---> + rail     Gnd ---> - rail
+
+  Label your sensors with tape (FRONT, BACK, LEFT, RIGHT) so you don't mix
+  them up later on the helmet.
+
+
+===============================================================================
+  PART 7 - THE BUZZER AND THE S8050 TRANSISTOR
+===============================================================================
+
+  7.1  WHY A TRANSISTOR?
+
+    A Pi pin can only give a tiny current and only 3.3V. The transistor is
+    a switch: the Pi pin flips it, and the buzzer gets its power from the
+    5V rail instead of from the pin. Louder buzzer, safe Pi.
+
+  7.2  FIND THE S8050'S LEGS FIRST
+
+    Hold it with the FLAT side (the side with writing) facing you and the
+    legs pointing down:
+
+            _________
+           /         \
+          |   S8050   |     <- flat side with the writing, facing you
+          |___________|
+            |   |   |
+            |   |   |
+            E   B   C
+
+        left    = E  (emitter)    goes to GND
+        middle  = B  (base)       the control leg, gets the Pi's signal
+        right   = C  (collector)  goes to the buzzer's black wire
+
+  7.3  THE CIRCUIT
+
+                        + rail (5V)
+                            |
+                     buzzer RED wire
+                       +---------+
+                       | BUZZER  |
+                       +---------+
+                     buzzer BLACK wire
+                            |
+                            C
+       Pi pin 12 --[ 1k ]-- B   S8050
+                            E
+                            |
+                        - rail (GND)
+
+  7.4  STEP BY STEP (rows 25 to 30, see the breadboard map in Part 5.3)
+
+    Step 1   Push the S8050 into column c: E in 28c, B in 29c, C in 30c.
+             Each leg must be in its OWN row.
+    Step 2   Short male-to-male wire from hole 28a ---> - rail.
+             (E is now connected to GND.)
+    Step 3   1k resistor: one leg in hole 25d, the other leg in hole 29d.
+             (Row 29 is the B leg's row.)
+    Step 4   Wire from hole 25e ---> Pi pin 12   (female-to-male wire)
+    Step 5   Buzzer BLACK wire ---> hole 30a.  (Row 30 is the C leg's row.)
+    Step 6   Buzzer RED wire   ---> + rail.
+
+    If the buzzer's wires are thin and floppy, twist each one tightly around
+    the male end of a jumper wire, or solder it, so it stays in the hole.
+
+    Red and black matter on the buzzer: red is +, black is -.
+
+
+===============================================================================
+  PART 8 - CHECK EVERYTHING BEFORE YOU POWER ON
+===============================================================================
+
+  With the Pi still unplugged, tick every box:
+
+  [ ] Pin 2 goes ONLY to the + rail. Pin 6 goes ONLY to the - rail.
+  [ ] No Echo wire goes straight to the Pi. Each one goes into row
+      1, 7, 13 or 19 first.
+  [ ] Each Trig wire goes straight to the Pi (pins 16, 11, 29, 38).
+  [ ] Each 1k is in column c, from the Echo row down 4 rows.
+  [ ] Each 2k goes from rows 5, 11, 17, 23 to the - rail (NOT the + rail).
+  [ ] Every sensor: VCC on +, Gnd on -. (VCC and Gnd swapped can kill a
+      sensor.)
+  [ ] S8050: E-B-C in rows 28-29-30, flat side checked.
+  [ ] Buzzer: red on the + rail, black in row 30.
+  [ ] No bare resistor legs or wire ends are touching each other above the
+      board.
+  [ ] Count the Pi pins one more time. Pin 2 is the TOP-left pin.
+
+  Only then plug the power in.
+
+
+===============================================================================
+  PART 9 - TESTING
+===============================================================================
+
+  Connect to the Pi from your computer (the Pi must be on the same Wi-Fi or
+  hotspot):
+
+      ssh putokulo@putokulo.local
+      cd ~/PutokUlo/pi
+
+  If you've already turned on autostart (see the Pi README), stop it
+  first, or the tests below say "GPIO busy":   ./autostart.sh stop
+  Turn it back on afterwards with:             ./autostart.sh start
+
+  9.1  BUZZER
+
+      python3 proximity.py --test-buzzer
+
+    You should hear: slow beeps, faster beeps, very fast beeps, then a
+    continuous tone, then it stops.
+
+  9.2  SENSORS
+
+      python3 proximity.py
+
+    You'll see one line that keeps updating:
+
+      front   87cm |  back   ---   |  left   ---   | right   ---
+
+    Hold your hand 30 to 150 cm in front of a sensor and move it closer
+    and farther away. The number should follow your hand, and the buzzer
+    should beep faster as your hand gets closer (continuous tone under
+    50 cm).
+
+    "---" means nothing detected. Closer than 25 cm also shows "---" on
+    purpose: on the helmet that's usually your own shoulders.
+
+    Press Ctrl+C to stop.
+
+  9.3  CAMERA
+
+      rpicam-hello --list-cameras          (should list 1 camera)
+      python3 camera_server.py
+
+    It prints an address like  http://192.168.43.20:8000/  . Open it in a
+    browser on your phone (same Wi-Fi/hotspot), or open the PutokUlo app's
+    Camera tab.
+
+
+===============================================================================
+  PART 10 - TROUBLESHOOTING
+===============================================================================
+
+  PROBLEM                                LIKELY CAUSE
+  -------------------------------------  --------------------------------------
+  One sensor always shows ---            Trig and Echo swapped, Trig on the
+                                         wrong Pi pin, VCC/Gnd not on the
+                                         rails, or a resistor in the wrong row
+  All sensors show ---                   Pin 2 or pin 6 not connected, or the
+                                         rail has a break in the middle
+  Numbers jump around randomly           A loose wire. Push everything in
+                                         firmly. Soft things (clothes,
+                                         curtains) also reflect badly
+  Buzzer silent in --test-buzzer         S8050 legs in the wrong order (re-check
+                                         the flat side), buzzer red/black
+                                         swapped, or the 1k not in row 29
+  Buzzer beeps all the time, even        Buzzer black is on the - rail instead
+  when the script is stopped             of row 30, or a loose leg is touching
+                                         the next row
+  Error "GPIO busy" or camera busy       The script is already running: from
+                                         autostart (stop it with
+                                         ./autostart.sh stop) or in another
+                                         window (press Ctrl+C there)
+  The Pi restarts when things beep,      Weak power supply. Use the official
+  or a lightning bolt shows on screen    5V 3A supply
+  "No cameras available"                 Ribbon cable backwards, not pushed
+                                         in, or in the DISPLAY slot (Part 3)
+
+  THE PI STARTS IN "EMERGENCY MODE"
+
+    The Pi couldn't read the SD card properly. Usually the card wasn't
+    written cleanly, the power was pulled during the first boot (the first
+    boot restarts by itself and takes up to 5 minutes), or the power supply
+    is too weak.
+
+    1. Unplug everything from the GPIO pins.
+    2. Write the card again with Raspberry Pi Imager and wait for
+       "Write Successful".
+    3. Boot with the official 5V 3A supply and don't touch it for 5 minutes.
+    4. Still happening? Try a different SD card (Samsung, SanDisk or
+       Kingston).
+
+
+===============================================================================
+  PART 11 - MOVING IT ONTO THE HELMET
+===============================================================================
+
+  Only after everything works on the desk.
+
+  WHERE THE SENSORS GO (looking down on the helmet from above)
+
+                         FRONT
+                    (facing forward,
+                     above the visor)
+                          ___
+                       .-'   '-.
+                      /         \
+            LEFT     |  helmet   |     RIGHT
+        (facing out  |    top    |  (facing out
+         to the side)|   view    |   to the side)
+                      \         /
+                       '-.___.-'
+                          BACK
+                   (facing backward)
+
+  * Each sensor's two "eyes" point AWAY from the helmet.
+  * Keep the sensors level (not pointing at the sky or the road).
+  * Point the side sensors slightly backward if they keep detecting your
+    own shoulders. You can also raise IGNORE_BELOW_CM in proximity.py.
+  * Longer wires (up to about 1-2 m) are fine for the sensors. A 4-core
+    cable per sensor keeps it tidy.
+  * Keep the resistors and the transistor next to the Pi.
+  * Breadboards shake loose on a bike. Once it works, solder the same
+    circuit onto a small perfboard (protoboard), and hot-glue or tape the
+    wires so they can't pull out.
+  * Power the Pi from a power bank that can give 5V 3A.
+  * Keep the Pi and the wiring out of the rain (a small case or a bag).
+
+
+===============================================================================
+  APPENDIX A - EVERY WIRE IN ONE LIST
+===============================================================================
+
+  Tick each one as you plug it in.
+
+        FROM                         TO                     WIRE TYPE
+  ---   ---------------------------  ---------------------  ---------------
+  POWER
+  [ ]   Pi pin 2 (5V)                + rail                 female-to-male
+  [ ]   Pi pin 6 (GND)               - rail                 female-to-male
+
+  FRONT SENSOR
+  [ ]   Front VCC                    + rail                 female-to-male
+  [ ]   Front Gnd                    - rail                 female-to-male
+  [ ]   Front Trig                   Pi pin 16              female-to-female
+  [ ]   Front Echo                   hole 1e                female-to-male
+  [ ]   1k resistor                  1c  and  5c
+  [ ]   2k resistor                  5a  and  - rail
+  [ ]   hole 5e                      Pi pin 18              female-to-male
+
+  BACK SENSOR
+  [ ]   Back VCC                     + rail                 female-to-male
+  [ ]   Back Gnd                     - rail                 female-to-male
+  [ ]   Back Trig                    Pi pin 11              female-to-female
+  [ ]   Back Echo                    hole 7e                female-to-male
+  [ ]   1k resistor                  7c  and  11c
+  [ ]   2k resistor                  11a and  - rail
+  [ ]   hole 11e                     Pi pin 13              female-to-male
+
+  LEFT SENSOR
+  [ ]   Left VCC                     + rail                 female-to-male
+  [ ]   Left Gnd                     - rail                 female-to-male
+  [ ]   Left Trig                    Pi pin 29              female-to-female
+  [ ]   Left Echo                    hole 13e               female-to-male
+  [ ]   1k resistor                  13c and  17c
+  [ ]   2k resistor                  17a and  - rail
+  [ ]   hole 17e                     Pi pin 31              female-to-male
+
+  RIGHT SENSOR
+  [ ]   Right VCC                    + rail                 female-to-male
+  [ ]   Right Gnd                    - rail                 female-to-male
+  [ ]   Right Trig                   Pi pin 38              female-to-female
+  [ ]   Right Echo                   hole 19e               female-to-male
+  [ ]   1k resistor                  19c and  23c
+  [ ]   2k resistor                  23a and  - rail
+  [ ]   hole 23e                     Pi pin 40              female-to-male
+
+  BUZZER
+  [ ]   S8050 legs                   E 28c, B 29c, C 30c
+  [ ]   hole 28a                     - rail                 male-to-male
+  [ ]   1k resistor                  25d and  29d
+  [ ]   hole 25e                     Pi pin 12              female-to-male
+  [ ]   Buzzer BLACK                 hole 30a
+  [ ]   Buzzer RED                   + rail
+
+  CAMERA
+  [ ]   Ribbon cable                 CAMERA slot, silver side facing HDMI
+
+
+===============================================================================
+  APPENDIX B - OTHER RESISTOR VALUES
+===============================================================================
+
+  No 2k resistors? The resistor to GND (bottom) just needs to be about
+  TWICE the resistor from Echo (top). Any of these pairs work:
+
+      Top (Echo side)   Bottom (to - rail)            The Pi sees
+      ---------------   ---------------------------   -----------
+      1k                2k                            3.3V
+      1k                two 1k in a row (= 2k)        3.3V
+      10k               20k                           3.3V
+      1k                1.5k                          3.0V
+      330 ohm           470 ohm                       2.9V
+
+  Don't use a bottom resistor that's the same or smaller than the top one
+  (the Pi may miss the echo), or one more than about twice as big (the Pi
+  would get more than 3.3V).
+
+  USING TWO 1k IN PLACE OF ONE 2k
+
+    Example for the front sensor (row 5):
+      - first 1k: from hole 5d, jumping over the middle gap, to hole 5f
+      - second 1k: from hole 5j to the - rail on the RIGHT side
+      - one wire joining the left - rail to the right - rail
+
+===============================================================================
+  End of guide. Good luck, and ride safe!
+===============================================================================
