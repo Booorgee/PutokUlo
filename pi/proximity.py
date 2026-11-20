@@ -70,7 +70,10 @@ class Ultrasonic:
         self._rise = None
         self._echo_s = None
         self._done.clear()
-        lgpio.gpio_trigger(self.handle, self.trig, 10, 1)  # 10 µs trigger pulse
+        # Trigger pulse of at least 10 µs. Python's sleep overshoots a little, which the HC-SR04 doesn't mind.
+        lgpio.gpio_write(self.handle, self.trig, 1)
+        time.sleep(0.00001)
+        lgpio.gpio_write(self.handle, self.trig, 0)
 
         cm = None
         if self._done.wait(ECHO_TIMEOUT_S):
