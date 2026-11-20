@@ -54,6 +54,7 @@ class Ultrasonic:
         self._done = threading.Event()
         # Last 3 readings; an object must show up in 2 of them to count, which filters stray echoes.
         self._history = deque([None] * 3, maxlen=3)
+        self.last_raw = "-"  # what the last ping saw, for --raw
 
         lgpio.gpio_claim_output(handle, trig, 0)
         lgpio.gpio_claim_alert(handle, echo, lgpio.BOTH_EDGES)
@@ -78,8 +79,13 @@ class Ultrasonic:
         cm = None
         if self._done.wait(ECHO_TIMEOUT_S):
             measured = self._echo_s * SPEED_OF_SOUND_CM_S / 2
+            self.last_raw = f"{measured:.0f}cm"
             if IGNORE_BELOW_CM <= measured <= MAX_RANGE_CM:
                 cm = measured
+        elif self._rise is None:
+            self.last_raw = "NO ECHO"     # Echo never went high: check power, Trig and Echo wiring
+        else:
+            self.last_raw = "ECHO STUCK"  # Echo went high and stayed high
         self._history.append(cm)
 
     @property
@@ -160,6 +166,7 @@ def format_readings(readings):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--test-buzzer", action="store_true", help="play slow, fast, then continuous beeps and exit")
+    parser.add_argument("--raw", action="store_true", help="show what each sensor answers, unfiltered (for wiring checks)")
     args = parser.parse_args()
 
     # systemctl stop sends SIGTERM; turn it into a normal exit so the cleanup below
@@ -191,7 +198,9 @@ def main():
             nearest = min((cm for cm in readings.values() if cm is not None), default=None)
             beeper.interval = beep_interval(nearest)
             publish(readings)
-            if live:
+            if live and args.raw:
+                print("\r" + " | ".join(f"{s.name:>5} {s.last_raw:<10}" for s in sensors), end="", flush=True)
+            elif live:
                 print("\r" + format_readings(readings), end="", flush=True)
     except KeyboardInterrupt:
         print()
